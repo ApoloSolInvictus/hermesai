@@ -220,20 +220,43 @@
             generateButton.disabled = false;
         }
 
-        // Simulación de la generación de reporte
-        generateButton.addEventListener('click', () => {
-            reportOutput.innerHTML = '<p class="text-emerald-400">Analizando imagen con TensorFlow.js... Por favor, espera.</p>';
-            // Aquí iría la lógica del modelo de IA.
-            // Por ahora, simularemos un resultado después de un tiempo.
-            setTimeout(() => {
-                reportOutput.innerHTML = `
-                    <p><strong class="text-sky-400">Hallazgos:</strong> Se observa una posible anomalía en el cuadrante superior derecho. La estructura ósea parece intacta. No hay evidencia de fracturas.</p>
-                    <p class="mt-2"><strong class="text-sky-400">Impresión:</strong> Sospecha de [condición médica]. Se recomienda correlación clínica y posible estudio complementario.</p>
-                    <p class="mt-4 text-xs italic text-slate-400">Este es un reporte preliminar generado por IA y debe ser validado por un radiólogo profesional.</p>
-                `;
-                downloadButton.disabled = false;
-            }, 3000);
+        // --- INICIO DE LA CORRECCIÓN ---
+        // Se reemplaza la simulación con la lógica real de TensorFlow.js
+        generateButton.addEventListener('click', async () => {
+            reportOutput.innerHTML = '<p class="text-emerald-400 animate-pulse">Cargando modelo de IA... Por favor, espera.</p>';
+            
+            try {
+                // 1. Cargar el modelo pre-entrenado MobileNet.
+                // Esta función 'mobilenet.load()' viene de la librería que incluimos.
+                const model = await mobilenet.load();
+                reportOutput.innerHTML = '<p class="text-emerald-400 animate-pulse">Modelo cargado. Analizando imagen...</p>';
+
+                // 2. Obtener el elemento de la imagen que el usuario subió.
+                const imageElement = document.getElementById('image-preview');
+                
+                // 3. Clasificar la imagen usando el modelo de IA.
+                const predictions = await model.classify(imageElement);
+
+                // 4. Formatear y mostrar los resultados reales en el área de reporte.
+                if (predictions && predictions.length > 0) {
+                    reportOutput.innerHTML = `
+                        <p><strong class="text-sky-400">Clasificación de la IA (Modelo General):</strong></p>
+                        <ul class="list-disc list-inside mt-2 space-y-1">
+                            ${predictions.map(p => `<li><strong>${(p.probability * 100).toFixed(2)}%</strong> de confianza en que es: <span class="font-semibold">${p.className.split(', ')[0]}</span></li>`).join('')}
+                        </ul>
+                        <p class="mt-4 text-xs italic text-slate-400">Reporte generado con MobileNet v2. Este es un modelo de propósito general para demostración y debe ser reemplazado por un modelo entrenado en imágenes médicas para obtener resultados clínicamente relevantes.</p>
+                    `;
+                    downloadButton.disabled = false;
+                } else {
+                     reportOutput.innerHTML = '<p class="text-amber-400">La IA no pudo identificar objetos en la imagen. Intenta con otra imagen.</p>';
+                }
+
+            } catch (error) {
+                console.error("Error durante el análisis de IA:", error);
+                reportOutput.innerHTML = '<p class="text-red-500">Ocurrió un error al procesar la imagen. Por favor, revisa la consola del navegador para más detalles técnicos.</p>';
+            }
         });
+        // --- FIN DE LA CORRECCIÓN ---
         
         // Lógica del Chat
         const chatWindow = document.getElementById('chat-window');
