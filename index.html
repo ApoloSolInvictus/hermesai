@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hermes AI - Asistente Radiológico Inteligente</title>
+    <!-- TensorFlow.js Core Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <!-- MobileNet Model Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@latest/dist/mobilenet.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -69,20 +73,20 @@
 <body class="bg-slate-900 text-white">
 
     <div id="hero-slideshow">
-        <img src="images/intro.webp" alt="Fondo de imagen médica 1: Resonancia magnética cerebral">
-        <img src="images/cover.webp" alt="Fondo de imagen médica 2: Red neuronal abstracta">
-        <img src="images/cuerpo.jpeg" alt="Fondo de imagen médica 3: Profesional de la salud analizando imágenes">
-        <img src="images/doctor.jpg" alt="Fondo de imagen médica 4: Visualización de datos moleculares">
-        <img src="images/pulmon.jpg" alt="Fondo de imagen médica 5: Escáner de tomografía computarizada">
-        <img src="images/fin.jpg" alt="Fondo de imagen médica 6: Fondo tecnológico abstracto">
-        <img src="images/HERMES.png" alt="Fondo de imagen médica 7: Radiografía de tórax">
+        <img src="https://images.unsplash.com/photo-1629155743840-3c1b6b5d9181?q=80&w=1974&auto=format&fit=crop" alt="Fondo de imagen médica 1: Resonancia magnética cerebral">
+        <img src="https://images.unsplash.com/photo-1535223289827-42f1e9919769?q=80&w=1974&auto=format&fit=crop" alt="Fondo de imagen médica 2: Red neuronal abstracta">
+        <img src="https://images.unsplash.com/photo-1579684385127-1ef15d508118?q=80&w=2080&auto=format&fit=crop" alt="Fondo de imagen médica 3: Profesional de la salud analizando imágenes">
+        <img src="https://images.unsplash.com/photo-1532187643623-dbf2f5a7d8bd?q=80&w=2070&auto=format&fit=crop" alt="Fondo de imagen médica 4: Visualización de datos moleculares">
+        <img src="https://images.unsplash.com/photo-1581092580497-c2d22c6c92e3?q=80&w=2070&auto=format&fit=crop" alt="Fondo de imagen médica 5: Escáner de tomografía computarizada">
+        <img src="https://images.unsplash.com/photo-1550745165-9bc0b252726a?q=80&w=2070&auto=format&fit=crop" alt="Fondo de imagen médica 6: Fondo tecnológico abstracto">
+        <img src="https://images.unsplash.com/photo-1584515933487-779824d27929?q=80&w=2070&auto=format&fit=crop" alt="Fondo de imagen médica 7: Radiografía de tórax">
     </div>
 
     <div class="min-h-screen p-4 sm:p-6 lg:p-8 relative z-10">
         <!-- Encabezado -->
         <header class="flex justify-between items-center mb-8">
             <div class="flex items-center space-x-3">
-                <img src="images/HERMES.png" alt="Logo de Hermes AI" class="h-12 w-auto">
+                <img src="https://placehold.co/200x60/0a192f/a7f3d0?text=Hermes+AI&font=inter" alt="Logo de Hermes AI" class="h-10 w-auto">
             </div>
             <a href="#" id="donate-button" class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-5 rounded-lg shadow-lg transition duration-300 flex items-center space-x-2">
                 <i data-lucide="heart"></i>
@@ -280,7 +284,6 @@
     </script>
 </body>
 </html>
-
 
 
 
