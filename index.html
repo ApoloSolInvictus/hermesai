@@ -239,16 +239,35 @@
 
                 // 4. Formatear y mostrar los resultados reales en el área de reporte.
                 if (predictions && predictions.length > 0) {
+                    const topPrediction = predictions[0];
+                    
                     reportOutput.innerHTML = `
-                        <p><strong class="text-sky-400">Clasificación de la IA (Modelo General):</strong></p>
-                        <ul class="list-disc list-inside mt-2 space-y-1">
-                            ${predictions.map(p => `<li><strong>${(p.probability * 100).toFixed(2)}%</strong> de confianza en que es: <span class="font-semibold">${p.className.split(', ')[0]}</span></li>`).join('')}
-                        </ul>
-                        <p class="mt-4 text-xs italic text-slate-400">Reporte generado con MobileNet v2. Este es un modelo de propósito general para demostración y debe ser reemplazado por un modelo entrenado en imágenes médicas para obtener resultados clínicamente relevantes.</p>
+                        <div class="space-y-3 text-sm">
+                            <div>
+                                <p class="font-semibold text-sky-400">ID de Estudio:</p>
+                                <p class="font-mono text-xs">${new Date().getTime()}</p>
+                            </div>
+                            <div>
+                                <p class="font-semibold text-sky-400">Hallazgos Principales (detectados por IA):</p>
+                                <p>- Se identifica una estructura con características consistentes con <strong class="text-emerald-300">${topPrediction.className.split(', ')[0]}</strong>.</p>
+                                <p>- Confianza de la IA en este hallazgo: <strong class="text-emerald-300">${(topPrediction.probability * 100).toFixed(2)}%</strong>.</p>
+                            </div>
+                            <div>
+                                <p class="font-semibold text-sky-400">Impresión Diagnóstica Preliminar:</p>
+                                <p>Los hallazgos sugieren una posible correlación con la estructura identificada. Se requiere una evaluación detallada por parte del especialista.</p>
+                            </div>
+                             <div>
+                                <p class="font-semibold text-sky-400">Recomendaciones:</p>
+                                <p>Correlacionar con el historial clínico del paciente y considerar estudios complementarios si es clínicamente indicado.</p>
+                            </div>
+                            <div class="pt-2 border-t border-slate-700">
+                                <p class="text-xs italic text-slate-400"><strong>**DISCLAIMER:**</strong> Este es un reporte preliminar generado por IA (Modelo General MobileNet v2) y NO constituye un diagnóstico. Debe ser revisado, validado y firmado por un radiólogo certificado.</p>
+                            </div>
+                        </div>
                     `;
                     downloadButton.disabled = false;
                 } else {
-                     reportOutput.innerHTML = '<p class="text-amber-400">La IA no pudo identificar objetos en la imagen. Intenta con otra imagen.</p>';
+                     reportOutput.innerHTML = '<p class="text-amber-400">La IA no pudo identificar estructuras claras en la imagen. Intenta con otra imagen o ajusta el contraste.</p>';
                 }
 
             } catch (error) {
@@ -307,6 +326,7 @@
     </script>
 </body>
 </html>
+
 
 
 
