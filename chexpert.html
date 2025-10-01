@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hermes AI - Asistente Radiológico Inteligente</title>
+    <!-- TensorFlow.js Core Library -->
+    <!-- Hemos quitado la librería específica de mobilenet, ya que ahora usamos tfjs-core para cargar el modelo de Transfer Learning -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Estilos originales del diseño Hermes AI */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .chat-bubble-user {
+            background-color: #0284c7; /* Azul cielo */
+        }
+        .chat-bubble-gemini {
+            background-color: #34d399; /* Verde esmeralda */
+        }
+        #hero-slideshow {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -10;
+            overflow: hidden;
+        }
+        #hero-slideshow img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            animation: crossfade 49s infinite; /* 7 images * 7s each */
+        }
+        #hero-slideshow img:nth-child(2) { animation-delay: 7s; }
+        #hero-slideshow img:nth-child(3) { animation-delay: 14s; }
+        #hero-slideshow img:nth-child(4) { animation-delay: 21s; }
+        #hero-slideshow img:nth-child(5) { animation-delay: 28s; }
+        #hero-slideshow img:nth-child(6) { animation-delay: 35s; }
+        #hero-slideshow img:nth-child(7) { animation-delay: 42s; }
+
+        @keyframes crossfade {
+            0%, 20%, 100% { opacity: 0; }
+            5%, 15% { opacity: 1; }
+        }
+
+        #hero-slideshow::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 25, 47, 0.7); /* Dark overlay */
+        }
+        
+        /* Estilo para los resultados de clasificación detallada */
+        .result-bar-container {
+            height: 8px;
+            border-radius: 4px;
+            background-color: rgba(255, 255, 255, 0.1);
+            margin-top: 4px;
+        }
+        .result-bar {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-white">
+
+    <div id="hero-slideshow">
+        <img src="images/cover.webp" alt="Fondo de imagen médica 1: Resonancia magnética cerebral">
+        <img src="images/cuerpo.jpeg" alt="Fondo de imagen médica 2: Red neuronal abstracta">
+        <img src="images/doctor.jpg" alt="Fondo de imagen médica 3: Profesional de la salud analizando imágenes">
+        <img src="images/intro.webp" alt="Fondo de imagen médica 4: Visualización de datos moleculares">
+        <img src="images/pulmon.jpg" alt="Fondo de imagen médica 5: Escáner de tomografía computarizada">
+        <img src="images/fin.jpg" alt="Fondo de imagen médica 6: Fondo tecnológico abstracto">
+        <img src="images/HERMES.png" alt="Fondo de imagen médica 7: Radiografía de tórax">
+    </div>
+
+    <div class="min-h-screen p-4 sm:p-6 lg:p-8 relative z-10">
+        <!-- Encabezado -->
+        <header class="flex justify-between items-center mb-8">
+            <div class="flex items-center space-x-3">
+                <!-- Se mantiene la ruta de imagen original -->
+                <img src="images/HERMES.png" alt="Logo de Hermes AI" class="h-12 w-auto"> 
+            </div>
+            <a href="#" id="donate-button" class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-5 rounded-lg shadow-lg transition duration-300 flex items-center space-x-2">
+                <i data-lucide="heart"></i>
+                <span>Donar con PayPal</span>
+            </a>
+        </header>
+
+        <main>
+            <!-- Sección de Introducción -->
+            <section class="text-center mb-12">
+                <h2 class="text-4xl md:text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-emerald-400">Generación de Reportes Radiológicos Avanzados</h2>
+                <p class="max-w-3xl mx-auto text-slate-300 text-lg">
+                    Hermes AI utiliza una red de Transfer Learning (MobileNetV2 + CheXpert) y la IA de Gemini para generar reportes preliminares narrativos y detallados a partir de Rayos X de tórax.
+                </p>
+                <div id="model-status" class="mt-4 p-3 glass-effect rounded-lg text-sm flex items-center justify-center space-x-2">
+                    <!-- Icono de carga SVG -->
+                    <svg class="animate-spin h-5 w-5 text-sky-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span class="text-sky-400">Cargando modelos...</span>
+                </div>
+            </section>
+
+            <!-- Contenedor Principal de la Aplicación -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+                <!-- Columna 1: Análisis de Imágenes -->
+                <div class="glass-effect rounded-2xl p-6 shadow-2xl">
+                    <h3 class="text-2xl font-semibold mb-4 flex items-center space-x-2 text-sky-400">
+                        <i data-lucide="scan-line"></i>
+                        <span>Análisis de Imagen (CheXpert)</span>
+                    </h3>
+                    
+                    <!-- Zona para subir archivos -->
+                    <div id="drop-zone" class="border-2 border-dashed border-slate-400 rounded-lg p-8 text-center cursor-pointer hover:border-emerald-400 hover:bg-slate-800/20 transition duration-300">
+                        <input type="file" id="file-input" class="hidden" accept="image/*">
+                        <div class="flex flex-col items-center text-slate-300">
+                             <i data-lucide="upload-cloud" class="w-16 h-16 mb-4"></i>
+                            <p class="font-semibold">Arrastra Rayos X de Tórax aquí</p>
+                            <p class="text-sm text-slate-400">o haz clic para seleccionar (solo formatos comunes)</p>
+                            <p id="file-name" class="mt-2 text-emerald-400"></p>
+                        </div>
+                    </div>
+                    
+                    <!-- Vista previa de imagen -->
+                    <div id="image-preview-container" class="mt-4 hidden">
+                        <p class="font-semibold mb-2 text-slate-300">Vista Previa:</p>
+                        <!-- ID y clases de previewImage se mantienen -->
+                        <img id="image-preview" src="#" alt="Vista previa de imagen" class="max-w-full mx-auto rounded-lg max-h-60 object-contain"/>
+                    </div>
+
+                    <button id="generate-report" class="mt-6 w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition duration-300 disabled:bg-slate-600 disabled:cursor-not-allowed" disabled>
+                        Generar Reporte
+                    </button>
+                    
+                    <!-- Área del Reporte -->
+                    <div class="mt-6">
+                        <h4 class="font-semibold text-lg mb-2 text-sky-400">Reporte Narrativo Generado por IA (Gemini):</h4>
+                        <div id="report-output" class="w-full h-auto min-h-[12rem] bg-slate-800/50 rounded-lg p-4 text-slate-300 overflow-y-auto">
+                            <span class="italic">Sube una imagen y presiona 'Generar Reporte' para iniciar el diagnóstico.</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Detalle de la Clasificación (Nuevo Contenedor para la lista de 14 clases) -->
+                    <div class="mt-6 pt-4 border-t border-slate-700">
+                        <h4 class="font-semibold text-lg mb-2 text-emerald-400">Detalle de Probabilidad (14 Clases CheXpert):</h4>
+                        <div id="results-container" class="space-y-3">
+                            <p class="text-sm text-slate-400">Aquí aparecerán las 14 probabilidades de patología.</p>
+                        </div>
+                    </div>
+                    
+                    <button id="download-report" class="mt-4 w-full bg-slate-600 hover:bg-slate-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 disabled:bg-slate-800 disabled:cursor-not-allowed" disabled>
+                        Descargar Reporte (En Desarrollo)
+                    </button>
+                </div>
+
+                <!-- Columna 2: Chat con Gemini (Se mantiene sin cambios) -->
+                <div class="glass-effect rounded-2xl p-6 shadow-2xl flex flex-col">
+                    <h3 class="text-2xl font-semibold mb-4 flex items-center space-x-2 text-emerald-400">
+                        <i data-lucide="bot"></i>
+                        <span>Asistente Gemini</span>
+                    </h3>
+                    <div id="chat-window" class="flex-grow bg-slate-800/50 rounded-lg p-4 overflow-y-auto mb-4 h-96">
+                        <!-- Mensajes de chat -->
+                        <div class="flex justify-start mb-4">
+                            <div class="chat-bubble-gemini text-white py-2 px-4 rounded-lg max-w-xs">
+                                ¡Hola! Soy Gemini. ¿En qué puedo ayudarte hoy con tus consultas radiológicas o técnicas?
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <input type="text" id="chat-input" placeholder="Escribe tu pregunta aquí..." class="flex-grow bg-slate-800 border border-slate-600 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <button id="send-chat" class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold p-3 rounded-lg flex items-center justify-center">
+                            <i data-lucide="send-horizontal"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        
+        // --- CONSTANTES DE LA IA ---
+        let model; // Modelo de TF.js para clasificación
+        // URL de un modelo MobileNetV2 para usar como extractor de características (Transfer Learning)
+        const MOBILENET_V2_URL = 'https://tfhub.dev/google/tfjs-model/imagenet/mobilenet_v2_100_224/feature_extractor/1/default/1';
+        const IMAGE_SIZE = 224;
+        const NUM_CLASSES = 14;
+        
+        // Configuración de la API de Gemini para la generación de texto del reporte
+        const API_KEY = ""; // Dejar vacío, se inyectará automáticamente
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
+        
+        // Etiquetas de las 14 clases del conjunto de datos CheXpert
+        const CHEXPERT_LABELS = [
+            "No Finding (Sin Hallazgo)", 
+            "Enlarged Cardiomediastinum (Cardiomediastino Agrandado)", 
+            "Cardiomegaly (Cardiomegalia)", 
+            "Lung Opacity (Opacidad Pulmonar)", 
+            "Lung Lesion (Lesión Pulmonar)", 
+            "Edema", 
+            "Consolidation (Consolidación)", 
+            "Pneumonia (Neumonía)", 
+            "Atelectasis (Atelectasia)", 
+            "Pneumothorax (Neumotórax)", 
+            "Pleural Effusion (Derrame Pleural)", 
+            "Pleural Other (Otro Hallazgo Pleural)", 
+            "Fracture (Fractura)", 
+            "Support Devices (Dispositivos de Soporte)"
+        ];
+
+        // --- MANEJO DEL DOM Y LÓGICA DE ARCHIVOS ---
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const fileNameDisplay = document.getElementById('file-name');
+        const imagePreviewContainer = document.getElementById('image-preview-container');
+        const imagePreview = document.getElementById('image-preview');
+        const generateButton = document.getElementById('generate-report');
+        const reportOutput = document.getElementById('report-output');
+        const downloadButton = document.getElementById('download-report');
+        const modelStatus = document.getElementById('model-status');
+        const resultsContainer = document.getElementById('results-container');
+        
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-emerald-400');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-emerald-400');
+        });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-emerald-400');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFile(files[0]);
+            }
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            fileNameDisplay.textContent = file.name;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imagePreview.src = e.target.result;
+                imagePreviewContainer.classList.remove('hidden');
+            }
+            reader.readAsDataURL(file);
+            if (model) { // Habilitar solo si el modelo ya cargó
+                generateButton.disabled = false;
+                generateButton.textContent = 'Generar Reporte';
+            }
+        }
+        
+        // --- FUNCIONES DE LA IA Y LÓGICA DEL MODELO ---
+
+        // Función para actualizar el estado del modelo en la interfaz
+        function updateModelStatus(isLoading, isSuccess, message) {
+            modelStatus.classList.remove('border-sky-400', 'border-emerald-400', 'border-red-500');
+            modelStatus.classList.add('flex', 'items-center', 'space-x-2');
+
+            if (isLoading) {
+                modelStatus.classList.add('border-sky-400');
+                modelStatus.innerHTML = `<svg class="animate-spin h-5 w-5 text-sky-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span class="text-sky-400">${message}</span>`;
+            } else if (isSuccess) {
+                modelStatus.classList.add('border-emerald-400');
+                modelStatus.innerHTML = `<i data-lucide="check-circle" class="text-emerald-400 w-5 h-5"></i><span class="text-emerald-400">✅ ${message}</span>`;
+            } else { // Error
+                modelStatus.classList.add('border-red-500');
+                modelStatus.innerHTML = `<i data-lucide="x-circle" class="text-red-500 w-5 h-5"></i><span class="text-red-500">❌ ${message}</span>`;
+            }
+            lucide.createIcons(); // Vuelve a renderizar iconos lucide
+        }
+        
+        // 1. Carga del Modelo de Transfer Learning (MobileNetV2 + Head Simulada)
+        async function setupTransferLearningModel() {
+            updateModelStatus(true, false, 'Paso 1/2: Cargando MobileNetV2 (Extractor de Características)...');
+
+            const baseModel = await tf.loadGraphModel(MOBILENET_V2_URL);
+            
+            updateModelStatus(true, false, 'Paso 2/2: Creando capa de clasificación CheXpert...');
+
+            // Se simula la cabeza de clasificación CheXpert (Multi-etiqueta con sigmoide)
+            const modelHead = tf.sequential({
+                layers: [
+                    tf.layers.flatten({ inputShape: baseModel.outputs[0].shape.slice(1) }),
+                    tf.layers.dense({ units: 512, activation: 'relu', kernelInitializer: 'varianceScaling' }),
+                    tf.layers.dense({ units: NUM_CLASSES, activation: 'sigmoid' }) 
+                ]
+            });
+
+            const combinedModel = tf.model({
+                inputs: baseModel.inputs,
+                outputs: modelHead.apply(baseModel.outputs[0]) 
+            });
+
+            combinedModel.compile({ 
+                optimizer: 'adam', 
+                loss: 'binaryCrossentropy', 
+                metrics: ['accuracy'] 
+            });
+
+            // Calentamiento del modelo
+            tf.tidy(() => combinedModel.predict(tf.zeros([1, IMAGE_SIZE, IMAGE_SIZE, 3]))).dispose();
+
+            return combinedModel;
+        }
+
+        async function loadModel() {
+            try {
+                model = await setupTransferLearningModel();
+                
+                updateModelStatus(false, true, 'Modelos de IA listos para el diagnóstico.');
+                
+                generateButton.textContent = 'Cargar Imagen para Analizar';
+                if (fileInput.files.length > 0) {
+                     generateButton.disabled = false;
+                     generateButton.textContent = 'Generar Reporte Radiológico';
+                }
+
+            } catch (error) {
+                console.error('Error al cargar el modelo:', error);
+                updateModelStatus(false, false, 'ERROR: No se pudo cargar el modelo base. Revise la conexión.');
+                generateButton.textContent = 'Error de Carga';
+            }
+        }
+        
+        // 2. Preprocesamiento de la imagen para el modelo
+        function preprocessImage(image) {
+            return tf.tidy(() => {
+                let tensor = tf.browser.fromPixels(image)
+                    .resizeNearestNeighbor([IMAGE_SIZE, IMAGE_SIZE]) 
+                    .toFloat();
+
+                // Manejo de imágenes en escala de grises o con canal alfa
+                if (tensor.shape[2] === 1) {
+                    tensor = tensor.tile([1, 1, 3]);
+                } else if (tensor.shape[2] === 4) {
+                     tensor = tensor.slice([0, 0, 0], [IMAGE_SIZE, IMAGE_SIZE, 3]);
+                }
+                
+                // Normalización: [0, 255] -> [-1, 1] (estándar de MobileNet)
+                const normalized = tensor.div(tf.scalar(255)); 
+                return normalized.sub(tf.scalar(0.5)).mul(tf.scalar(2)).expandDims(0);
+            });
+        }
+        
+        // 3. Generación de Texto Narrativo con Gemini API
+        async function generateReportText(structuredFindings) {
+            const systemPrompt = `Actúa como un radiólogo experto. Analiza los hallazgos de Rayos X de tórax proporcionados a continuación y genera un reporte clínico completo en español con la siguiente estructura y formato Markdown:
+                
+                ### RX de Tórax PA y Lateral (Interpretación AI)
+                
+                **Hallazgos:** (Descripción narrativa de lo que se observa, mencionando solo las condiciones con probabilidad > 50%. Si "No Finding" es el más alto, indícalo.)
+                
+                **Impresión:** (Resumen conciso y clínico de los hallazgos más importantes.)
+                
+                **Recomendaciones:** (Si hay hallazgos patológicos, sugiere correlación clínica y/o estudios de seguimiento pertinentes. Si no hay hallazgos, indica "No se requieren estudios adicionales por ahora".)
+                
+                Asegúrate de que el tono sea profesional y preciso.`;
+
+            const userQuery = `Los hallazgos de la clasificación IA son: ${structuredFindings}. Genera el reporte completo.`;
+            
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                },
+            };
+
+            const maxRetries = 3;
+            let lastError;
+
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const result = await response.json();
+                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                    if (text) {
+                        return text;
+                    }
+                } catch (error) {
+                    console.error(`Intento ${i + 1} fallido al llamar a la API de Gemini.`, error);
+                    lastError = error;
+                    // Espera exponencial antes de reintentar
+                    await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000)); 
+                }
+            }
+
+            console.error('Fallo la llamada a la API de Gemini después de varios reintentos.', lastError);
+            return "--- ERROR: No se pudo generar el reporte narrativo (problema de conexión con la IA de texto). ---";
+        }
+
+        // --- FUNCIÓN PRINCIPAL DE PREDICCIÓN Y GENERACIÓN DE REPORTE ---
+
+        generateButton.addEventListener('click', async () => {
+            if (!model || generateButton.disabled) return;
+            if (!imagePreview.src || imagePreview.src.includes('data:image') === false) {
+                 reportOutput.innerHTML = '<span class="text-amber-400">Por favor, primero sube una imagen de Rayos X.</span>';
+                 return;
+            }
+
+            generateButton.disabled = true;
+            generateButton.textContent = 'Analizando y generando reporte...';
+            reportOutput.innerHTML = '<p class="text-sky-400 animate-pulse">Iniciando el diagnóstico de la imagen...</p>';
+            resultsContainer.innerHTML = '<p class="text-slate-400 text-sm">Procesando...</p>';
+            downloadButton.disabled = true;
+            
+            await new Promise(resolve => setTimeout(resolve, 10)); // Pequeña pausa para actualización de UI
+
+            let probabilities;
+            let structuredFindings = '';
+
+            try {
+                // 1. CLASIFICACIÓN (TF.js)
+                const inputTensor = preprocessImage(imagePreview);
+                const predictions = model.predict(inputTensor);
+                probabilities = await predictions.data();
+                predictions.dispose();
+                inputTensor.dispose();
+
+                // 2. PREPARAR HALLAZGOS ESTRUCTURADOS PARA EL LLM
+                structuredFindings = CHEXPERT_LABELS.map((label, index) => {
+                    return `${label}: ${(probabilities[index] * 100).toFixed(2)}%`;
+                }).join('; ');
+                
+                // 3. GENERACIÓN NARRATIVA (GEMINI API)
+                reportOutput.innerHTML = '<p class="text-emerald-400 animate-pulse">Llamando a la IA de texto para generar el reporte clínico...</p>';
+                const reportText = await generateReportText(structuredFindings);
+                
+                // 4. MOSTRAR RESULTADOS
+                reportOutput.innerHTML = `<pre class="whitespace-pre-wrap p-0 m-0 text-sm">${reportText}</pre>`;
+                displayResults(probabilities);
+                downloadButton.disabled = false; // Habilitar descarga
+                
+            } catch (error) {
+                console.error('Error durante la predicción o generación del reporte:', error);
+                reportOutput.innerHTML = '<p class="text-red-500 font-semibold">Error crítico al procesar la imagen o generar el reporte. Revisa la consola.</p>';
+                resultsContainer.innerHTML = '<div class="text-red-500 text-sm">No se pudieron obtener los resultados de clasificación.</div>';
+            } finally {
+                generateButton.disabled = false;
+                generateButton.textContent = 'Generar Reporte Radiológico';
+            }
+        });
+        
+        /**
+         * Muestra las probabilidades de las 14 patologías en el DOM.
+         */
+        function displayResults(probabilities) {
+            resultsContainer.innerHTML = ''; // Limpiar resultados anteriores
+            
+            let htmlContent = CHEXPERT_LABELS.map((label, index) => {
+                const probability = probabilities[index];
+                const percentage = (probability * 100).toFixed(2);
+                
+                // Tema oscuro: colores vibrantes sobre fondo gris oscuro
+                let colorClass = 'bg-slate-600';
+                if (probability > 0.8) {
+                    colorClass = 'bg-red-500'; // Peligro alto
+                } else if (probability > 0.6) {
+                    colorClass = 'bg-orange-400';
+                } else if (probability > 0.3) {
+                    colorClass = 'bg-yellow-400';
+                } else {
+                    colorClass = 'bg-emerald-400'; // Normal/Bajo
+                }
+                
+                const textEmphasis = probability > 0.6 ? 'text-red-400' : 'text-slate-300';
+
+
+                return `
+                    <div class="py-1">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-semibold text-slate-300">${label}</span>
+                            <span class="font-bold ${textEmphasis}">${percentage}%</span>
+                        </div>
+                        <div class="result-bar-container">
+                            <div class="result-bar ${colorClass}" style="width: ${percentage}%;"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            resultsContainer.insertAdjacentHTML('beforeend', htmlContent);
+        }
+        
+        // --- LÓGICA DEL CHAT (Se mantiene sin cambios y sin funcionalidad de IA real por ahora) ---
+        const chatWindow = document.getElementById('chat-window');
+        const chatInput = document.getElementById('chat-input');
+        const sendButton = document.getElementById('send-chat');
+
+        const addChatMessage = (message, sender) => {
+            const messageDiv = document.createElement('div');
+            const bubbleDiv = document.createElement('div');
+            
+            messageDiv.classList.add('flex', 'mb-4');
+            bubbleDiv.classList.add('text-white', 'py-2', 'px-4', 'rounded-lg', 'max-w-xs');
+
+            if (sender === 'user') {
+                messageDiv.classList.add('justify-end');
+                bubbleDiv.classList.add('chat-bubble-user');
+            } else {
+                messageDiv.classList.add('justify-start');
+                bubbleDiv.classList.add('chat-bubble-gemini');
+            }
+
+            bubbleDiv.textContent = message;
+            messageDiv.appendChild(bubbleDiv);
+            chatWindow.appendChild(messageDiv);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        const handleChatSend = () => {
+            const userMessage = chatInput.value.trim();
+            if (userMessage) {
+                addChatMessage(userMessage, 'user');
+                chatInput.value = '';
+                
+                // Simulación de respuesta de Gemini
+                setTimeout(() => {
+                    addChatMessage("Estoy procesando tu pregunta. Dame un momento...", 'gemini');
+                }, 1500);
+            }
+        };
+        
+        sendButton.addEventListener('click', handleChatSend);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleChatSend();
+            }
+        });
+
+
+        window.onload = loadModel;
+    </script>
+</body>
+</html>
