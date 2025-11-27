@@ -7,361 +7,419 @@
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- TensorFlow.js -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-    <!-- Teachable Machine Image (Optional helper) -->
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
-
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <!-- Fuentes -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Iconos Lucide -->
     <script src="https://unpkg.com/lucide@latest"></script>
     
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
-        .loader { border-top-color: #3B82F6; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
-        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        
+        /* Animaciones */
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
         .scan-line {
             position: absolute;
             width: 100%;
-            height: 4px;
+            height: 2px;
             background: #3B82F6;
-            box-shadow: 0 0 10px #3B82F6;
-            animation: scan 2s infinite;
+            box-shadow: 0 0 15px #3B82F6;
+            animation: scan 2s infinite linear;
             display: none;
+            z-index: 10;
         }
-        @keyframes scan { 0% { top: 0%; } 50% { top: 100%; } 100% { top: 0%; } }
-        
-        /* Estilos para las barras de resultados de CheXpert */
-        .result-bar-container {
-            height: 6px;
-            border-radius: 3px;
-            background-color: #e5e7eb;
-            margin-top: 4px;
-            overflow: hidden;
+        @keyframes scan { 0% { top: 0%; } 50% { top: 100%; opacity: 0; } 100% { top: 0%; opacity: 1; } }
+
+        /* Loader Circular */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3b82f6;
+            animation: spin 1s linear infinite;
         }
-        .result-bar {
-            height: 100%;
-            border-radius: 3px;
-            transition: width 0.5s ease-in-out;
-        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="text-gray-800">
+<body class="text-slate-800 antialiased">
 
     <!-- Navbar -->
-    <nav class="bg-white shadow-md">
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50 backdrop-blur-md bg-opacity-90">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
-                <div class="flex items-center space-x-2">
-                    <i data-lucide="activity" class="text-blue-600 w-8 h-8"></i>
-                    <span class="text-2xl font-bold text-blue-600 tracking-wider">HealthVision AI</span>
+                <div class="flex items-center gap-3">
+                    <!-- Logo Placeholder -->
+                    <div class="bg-gradient-to-tr from-blue-600 to-teal-400 text-white p-2 rounded-lg shadow-md">
+                        <i data-lucide="activity" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <span class="text-xl font-bold text-slate-800 tracking-tight">HealthVision AI</span>
+                        <span class="text-xs text-slate-500 block font-medium">Powered by Abundia.io</span>
+                    </div>
                 </div>
-                <div class="flex items-center space-x-4">
-                    <select id="language-selector" class="bg-gray-100 border border-gray-300 text-gray-700 py-1 px-3 rounded focus:outline-none focus:bg-white focus:border-gray-500">
-                        <option value="es">Español</option>
-                        <option value="en">English</option>
-                        <option value="fr">Français</option>
-                        <option value="pt">Português</option>
-                    </select>
+                <div class="flex items-center gap-4">
+                    <div class="hidden md:flex items-center text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                        <span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+                        Sistema Operativo
+                    </div>
+                    <button class="p-2 hover:bg-slate-100 rounded-full transition text-slate-600">
+                        <i data-lucide="globe" class="w-5 h-5"></i>
+                    </button>
                 </div>
             </div>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <div class="max-w-7xl mx-auto px-4 py-10">
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 fade-in">
         
-        <!-- Header -->
-        <div class="text-center mb-12">
-            <h1 class="text-4xl font-bold mb-2" data-i18n="title">Análisis Médico Asistido por IA</h1>
-            <p class="text-gray-500 max-w-2xl mx-auto" data-i18n="subtitle">Sistema de apoyo diagnóstico global y gratuito. Detecta 14 patologías pulmonares usando IA en el borde.</p>
-            
-            <div id="model-status" class="mt-4 inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-800" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                Cargando modelos neuronales...
-            </div>
+        <!-- Header Section -->
+        <div class="text-center mb-10">
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-900 mb-3">Análisis Médico Inteligente</h1>
+            <p class="text-slate-500 max-w-2xl mx-auto text-lg">
+                Sube estudios médicos (DICOM, PNG, JPG) para obtener un pre-análisis asistido por IA y reportes estructurados.
+            </p>
         </div>
 
-        <div class="grid lg:grid-cols-2 gap-8">
+        <div class="grid lg:grid-cols-12 gap-8">
             
-            <!-- Input Section -->
-            <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200 h-fit">
-                <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2 flex items-center" data-i18n="upload_title">
-                    <i data-lucide="upload" class="w-5 h-5 mr-2"></i> Cargar Estudio Médico
-                </h2>
+            <!-- Left Column: Upload & Configuration (4 cols) -->
+            <div class="lg:col-span-4 space-y-6">
                 
-                <!-- Image Upload Area -->
-                <div class="relative w-full h-80 border-2 border-dashed border-blue-300 rounded-lg flex flex-col justify-center items-center bg-blue-50 hover:bg-blue-100 transition cursor-pointer overflow-hidden" id="drop-area">
-                    <input type="file" id="image-upload" class="absolute w-full h-full opacity-0 cursor-pointer" accept="image/*">
-                    <div id="upload-placeholder" class="text-center p-6">
-                        <i data-lucide="image-plus" class="w-16 h-16 text-blue-400 mx-auto mb-4"></i>
-                        <span class="text-blue-500 font-medium block" data-i18n="select_image">Seleccionar imagen o arrastrar aquí</span>
-                        <span class="text-gray-400 text-xs block mt-2">(Formatos: JPG, PNG - RX Tórax)</span>
+                <!-- Upload Card -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                        <h2 class="font-semibold text-slate-700 flex items-center gap-2">
+                            <i data-lucide="upload-cloud" class="w-4 h-4 text-blue-500"></i> Cargar Estudio
+                        </h2>
+                        <span class="text-xs font-mono text-slate-400">v2.1.0</span>
                     </div>
-                    <img id="preview-image" class="absolute w-full h-full object-contain hidden" />
-                    <div class="scan-line" id="scan-line"></div>
-                </div>
-
-                <!-- Controls -->
-                <div class="mt-6 space-y-4">
-                    <button id="analyze-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition transform active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center shadow-md" disabled>
-                        <i data-lucide="zap" class="w-5 h-5 mr-2"></i>
-                        <span data-i18n="analyze_btn">Analizar con IA</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Results Section -->
-            <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200 flex flex-col h-full min-h-[600px]">
-                <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2 flex items-center" data-i18n="results_title">
-                    <i data-lucide="file-text" class="w-5 h-5 mr-2"></i> Resultados del Análisis
-                </h2>
-                
-                <div id="results-content" class="flex-1 flex flex-col">
                     
-                    <!-- Initial State -->
-                    <div id="initial-state" class="flex-1 flex flex-col justify-center items-center text-center opacity-60">
-                        <i data-lucide="microscope" class="w-20 h-20 text-gray-300 mb-4"></i>
-                        <p class="text-gray-500" data-i18n="waiting_results">Esperando imagen para análisis...</p>
-                    </div>
-
-                    <!-- Loading State -->
-                    <div id="loading-state" class="hidden flex-1 flex flex-col justify-center items-center text-center">
-                        <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div>
-                        <p class="text-blue-600 font-semibold animate-pulse" data-i18n="processing">Procesando redes neuronales...</p>
-                        <p class="text-xs text-gray-400 mt-2">Analizando 14 marcadores patológicos</p>
-                    </div>
-
-                    <!-- Prediction State -->
-                    <div id="prediction-state" class="hidden w-full text-left space-y-6">
-                        
-                        <!-- Reporte Narrativo (Gemini) -->
-                        <div class="bg-slate-50 border border-slate-200 rounded-lg p-4">
-                            <h3 class="font-bold text-gray-800 mb-2 flex items-center text-sm uppercase tracking-wide">
-                                <i data-lucide="bot" class="w-4 h-4 mr-2 text-purple-600"></i> Reporte Clínico (IA Generativa)
-                            </h3>
-                            <div id="report-text" class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed font-mono">
-                                <!-- Texto generado se inyecta aquí -->
-                            </div>
-                        </div>
-
-                        <!-- Detalle Estructural (CheXpert) -->
-                        <div>
-                            <h3 class="font-bold text-gray-800 mb-3 flex items-center text-sm uppercase tracking-wide">
-                                <i data-lucide="bar-chart-2" class="w-4 h-4 mr-2 text-blue-600"></i> Análisis Probabilístico (14 Clases)
-                            </h3>
-                            <div id="chexpert-results" class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 max-h-60 overflow-y-auto pr-2">
-                                <!-- Barras se inyectan aquí -->
-                            </div>
-                        </div>
-
-                        <!-- Disclaimer -->
-                        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
-                            <div class="flex">
-                                <div class="flex-shrink-0">
-                                    <i data-lucide="alert-triangle" class="h-5 w-5 text-yellow-400"></i>
-                                </div>
-                                <div class="ml-3">
-                                    <p class="text-xs text-yellow-700">
-                                        <strong data-i18n="disclaimer">AVISO LEGAL:</strong> 
-                                        <span data-i18n="disclaimer_text">Esta herramienta es un asistente de IA para fines educativos y de apoyo. NO sustituye el diagnóstico de un profesional médico certificado.</span>
-                                    </p>
+                    <div class="p-6">
+                        <form id="analysis-form" class="space-y-4">
+                            <!-- Dropzone -->
+                            <div id="drop-zone" class="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-blue-500 hover:bg-blue-50 transition-all cursor-pointer group relative">
+                                <input type="file" name="file" id="file-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="image/png, image/jpeg, application/dicom, .dcm">
+                                
+                                <div class="group-hover:-translate-y-1 transition-transform duration-300">
+                                    <div class="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 text-blue-600">
+                                        <i data-lucide="image-plus" class="w-6 h-6"></i>
+                                    </div>
+                                    <p class="text-sm font-medium text-slate-700">Arrastra o selecciona</p>
+                                    <p class="text-xs text-slate-400 mt-1">DICOM, JPG, PNG (Max 10MB)</p>
                                 </div>
                             </div>
-                        </div>
 
-                        <button id="download-btn" class="w-full bg-gray-800 text-white font-bold py-2 px-4 rounded hover:bg-black transition flex justify-center items-center text-sm">
-                            <i data-lucide="download" class="w-4 h-4 mr-2"></i> Descargar PDF
-                        </button>
+                            <!-- Selected File Info -->
+                            <div id="file-info" class="hidden bg-blue-50 border border-blue-100 rounded-lg p-3 flex items-center justify-between">
+                                <div class="flex items-center gap-3 overflow-hidden">
+                                    <i data-lucide="file-bar-chart" class="w-5 h-5 text-blue-600 flex-shrink-0"></i>
+                                    <span id="filename-display" class="text-sm text-blue-800 truncate font-medium">imagen.dcm</span>
+                                </div>
+                                <button type="button" id="remove-file" class="text-blue-400 hover:text-red-500 transition">
+                                    <i data-lucide="x" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+
+                            <!-- Patient Metadata (Required by Backend Schema) -->
+                            <div class="space-y-3 pt-2">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">ID Paciente / Usuario</label>
+                                    <input type="text" name="user_id" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="Ej: USER-1234" required>
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Edad</label>
+                                        <input type="number" name="patient_age" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Género</label>
+                                        <select name="patient_gender" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                            <option value="M">Masculino</option>
+                                            <option value="F">Femenino</option>
+                                            <option value="O">Otro</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Modalidad</label>
+                                    <select name="image_type" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                        <option value="xray">Rayos X (Tórax)</option>
+                                        <option value="ct">Tomografía (CT)</option>
+                                        <option value="mri">Resonancia (MRI)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Submit Button -->
+                            <button type="submit" id="submit-btn" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 rounded-lg transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2" disabled>
+                                <span>Iniciar Análisis</span>
+                                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- System Status (Optional) -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase mb-3">Estado del Sistema</h3>
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center text-sm">
+                            <span class="text-slate-600 flex items-center gap-2"><i data-lucide="cpu" class="w-3 h-3"></i> API Gateway</span>
+                            <span class="text-emerald-500 font-mono text-xs">ONLINE</span>
+                        </div>
+                        <div class="flex justify-between items-center text-sm">
+                            <span class="text-slate-600 flex items-center gap-2"><i data-lucide="brain-circuit" class="w-3 h-3"></i> Worker IA</span>
+                            <span class="text-emerald-500 font-mono text-xs">READY</span>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <!-- Right Column: Visualization & Results (8 cols) -->
+            <div class="lg:col-span-8 space-y-6">
+                
+                <!-- Viewer Panel -->
+                <div class="bg-slate-900 rounded-xl shadow-lg overflow-hidden relative min-h-[400px] flex flex-col">
+                    <div class="absolute top-4 left-4 z-20 bg-black/50 backdrop-blur px-3 py-1 rounded-full text-xs text-white border border-white/10">
+                        Visor DICOM / Imagen
+                    </div>
+                    
+                    <!-- Image Display Area -->
+                    <div class="flex-1 relative flex items-center justify-center bg-black" id="viewer-container">
+                        <div class="text-center p-10 opacity-30" id="empty-state-viewer">
+                            <i data-lucide="scan" class="w-24 h-24 mx-auto text-slate-500 mb-4"></i>
+                            <p class="text-slate-400">Esperando imagen para visualizar</p>
+                        </div>
+                        
+                        <img id="main-image" class="max-w-full max-h-[500px] object-contain hidden z-10 relative" alt="Estudio Médico">
+                        <div class="scan-line" id="scan-line"></div>
+                    </div>
+
+                    <!-- Processing Overlay -->
+                    <div id="processing-overlay" class="absolute inset-0 bg-black/80 backdrop-blur-sm z-30 hidden flex-col items-center justify-center text-white fade-in">
+                        <div class="spinner mb-4 border-white border-l-blue-500"></div>
+                        <h3 class="text-xl font-bold">Analizando Estudio</h3>
+                        <p class="text-slate-400 text-sm mt-1">Procesando redes neuronales...</p>
+                        <div class="w-64 h-1 bg-slate-800 rounded-full mt-6 overflow-hidden">
+                            <div class="h-full bg-blue-500 animate-progress origin-left w-full"></div>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-2 font-mono" id="status-text">Iniciando Worker...</p>
+                    </div>
+                </div>
+
+                <!-- Results Panel (Hidden by default) -->
+                <div id="results-panel" class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hidden fade-in">
+                    <div class="flex justify-between items-start mb-6 border-b border-slate-100 pb-4">
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-800">Reporte de IA</h2>
+                            <p class="text-sm text-slate-500">Generado el <span id="report-date">--/--/----</span></p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition flex items-center gap-2">
+                                <i data-lucide="download" class="w-4 h-4"></i> PDF
+                            </button>
+                            <div class="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-sm font-bold border border-emerald-200">
+                                Confianza: <span id="confidence-score">--</span>%
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <!-- Findings -->
+                        <div>
+                            <h4 class="text-sm font-bold text-slate-400 uppercase mb-3 tracking-wider">Hallazgos Detectados</h4>
+                            <div id="findings-list" class="space-y-3">
+                                <!-- Injected via JS -->
+                            </div>
+                        </div>
+
+                        <!-- Recommendations & Summary -->
+                        <div class="bg-slate-50 rounded-lg p-5 border border-slate-100">
+                            <h4 class="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                                <i data-lucide="file-text" class="w-4 h-4 text-blue-500"></i> Resumen Clínico
+                            </h4>
+                            <p class="text-sm text-slate-600 leading-relaxed" id="ai-summary">
+                                El análisis preliminar sugiere...
+                            </p>
+                            
+                            <div class="mt-4 pt-4 border-t border-slate-200">
+                                <h4 class="text-sm font-bold text-slate-700 mb-2">Recomendaciones</h4>
+                                <ul class="list-disc list-inside text-sm text-slate-600 space-y-1" id="recommendations-list">
+                                    <!-- Injected via JS -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Disclaimer Footer -->
+                    <div class="mt-6 bg-yellow-50 border border-yellow-100 p-3 rounded-lg flex items-start gap-3">
+                        <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5"></i>
+                        <p class="text-xs text-yellow-800 leading-snug">
+                            <strong>Aviso de Responsabilidad:</strong> HealthVision AI es una herramienta de soporte. Los resultados deben ser verificados por un profesional de la salud certificado. No tome decisiones médicas basándose únicamente en este reporte.
+                        </p>
+                    </div>
+                </div>
+
+            </div>
         </div>
-    </div>
+    </main>
 
     <script>
+        // Initialize Icons
         lucide.createIcons();
 
-        // --- 1. CONFIGURACIÓN Y CONSTANTES ---
-        // Clases del modelo CheXpert (Estándar médico)
-        const CHEXPERT_LABELS = [
-            "No Finding (Sin Hallazgo)", 
-            "Enlarged Cardiomediastinum", 
-            "Cardiomegaly", 
-            "Lung Opacity", 
-            "Lung Lesion", 
-            "Edema", 
-            "Consolidation", 
-            "Pneumonia", 
-            "Atelectasis", 
-            "Pneumothorax", 
-            "Pleural Effusion", 
-            "Pleural Other", 
-            "Fracture", 
-            "Support Devices"
-        ];
+        // DOM Elements
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const fileInfo = document.getElementById('file-info');
+        const fileNameDisplay = document.getElementById('filename-display');
+        const removeFileBtn = document.getElementById('remove-file');
+        const submitBtn = document.getElementById('submit-btn');
+        const form = document.getElementById('analysis-form');
+        
+        const viewerContainer = document.getElementById('viewer-container');
+        const emptyStateViewer = document.getElementById('empty-state-viewer');
+        const mainImage = document.getElementById('main-image');
+        
+        const processingOverlay = document.getElementById('processing-overlay');
+        const scanLine = document.getElementById('scan-line');
+        const statusText = document.getElementById('status-text');
+        
+        const resultsPanel = document.getElementById('results-panel');
 
-        // Gemini API Configuration
-        // NOTA PARA SEBASTIAN: La API Key debe inyectarse aquí o manejarse de forma segura.
-        const GEMINI_API_KEY = ""; 
-        const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
+        // --- UI Interactions ---
 
-        let model;
-        const URL_MODELO = "./my_model/"; // Ruta donde Sebastian pondrá su modelo exportado
-
-        // --- 2. GESTIÓN DE IDIOMAS ---
-        const translations = {
-            es: {
-                title: "Análisis Médico Asistido por IA",
-                subtitle: "Sistema de apoyo diagnóstico global y gratuito. Detecta 14 patologías pulmonares.",
-                upload_title: "Cargar Estudio Médico",
-                select_image: "Seleccionar imagen o arrastrar aquí",
-                analyze_btn: "Analizar con IA",
-                results_title: "Resultados del Análisis",
-                waiting_results: "Esperando imagen...",
-                processing: "Procesando...",
-                disclaimer: "AVISO:",
-                disclaimer_text: "Herramienta de asistencia. NO sustituye diagnóstico médico."
-            },
-            en: {
-                title: "AI Assisted Medical Analysis",
-                subtitle: "Global free diagnostic support. Detects 14 pulmonary pathologies.",
-                upload_title: "Upload Medical Study",
-                select_image: "Select image or drag here",
-                analyze_btn: "Analyze with AI",
-                results_title: "Analysis Results",
-                waiting_results: "Waiting for image...",
-                processing: "Processing...",
-                disclaimer: "DISCLAIMER:",
-                disclaimer_text: "Assistance tool only. DOES NOT replace medical diagnosis."
-            }
-            // Agregar FR y PT aquí...
-        };
-
-        document.getElementById('language-selector').addEventListener('change', (e) => {
-            const lang = e.target.value;
-            document.querySelectorAll('[data-i18n]').forEach(el => {
-                const key = el.getAttribute('data-i18n');
-                if (translations[lang] && translations[lang][key]) el.textContent = translations[lang][key];
-            });
+        // Drag & Drop
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-blue-500', 'bg-blue-50');
         });
 
-        // --- 3. LÓGICA DE IA (MODELO + INFERENCIA) ---
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+        });
 
-        async function init() {
-            const statusEl = document.getElementById('model-status');
-            try {
-                // Intenta cargar el modelo de Sebastian
-                // model = await tmImage.load(URL_MODELO + "model.json", URL_MODELO + "metadata.json");
-                
-                // SIMULACIÓN PARA DEMOSTRACIÓN (Eliminar al integrar modelo real)
-                // Simulamos que el modelo cargó
-                setTimeout(() => {
-                    statusEl.className = "mt-4 inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800";
-                    statusEl.innerHTML = `<i data-lucide="check" class="w-4 h-4 mr-2"></i> Sistema Neural Activo (Modo Simulación)`;
-                    lucide.createIcons();
-                    
-                    if (document.getElementById('image-upload').files.length > 0) {
-                        document.getElementById('analyze-btn').disabled = false;
-                    }
-                }, 1500);
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+            if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+        });
 
-            } catch (e) {
-                console.error("Error cargando modelo:", e);
-                statusEl.className = "mt-4 inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-red-100 text-red-800";
-                statusEl.innerText = "Error de carga de IA";
-            }
+        // Click Upload
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) handleFile(e.target.files[0]);
+        });
+
+        function handleFile(file) {
+            // Show file info
+            fileNameDisplay.textContent = file.name;
+            fileInfo.classList.remove('hidden');
+            dropZone.classList.add('hidden'); // Hide dropzone to save space or style differently
+            submitBtn.disabled = false;
+
+            // Preview Image
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                mainImage.src = e.target.result;
+                mainImage.classList.remove('hidden');
+                emptyStateViewer.classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
         }
 
-        // --- 4. MANEJO DE IMAGEN Y UI ---
+        removeFileBtn.addEventListener('click', () => {
+            fileInput.value = '';
+            fileInfo.classList.add('hidden');
+            dropZone.classList.remove('hidden');
+            mainImage.classList.add('hidden');
+            mainImage.src = '';
+            emptyStateViewer.classList.remove('hidden');
+            submitBtn.disabled = true;
+            resultsPanel.classList.add('hidden');
+        });
+
+        // --- Backend Communication (Simulation for now) ---
         
-        const imageUpload = document.getElementById('image-upload');
-        const previewImage = document.getElementById('preview-image');
-        const analyzeBtn = document.getElementById('analyze-btn');
-
-        imageUpload.addEventListener('change', (e) => {
-            if (e.target.files && e.target.files[0]) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    previewImage.src = e.target.result;
-                    previewImage.classList.remove('hidden');
-                    document.getElementById('upload-placeholder').classList.add('hidden');
-                    analyzeBtn.disabled = false;
-                }
-                reader.readAsDataURL(e.target.files[0]);
-            }
-        });
-
-        // --- 5. ANÁLISIS Y GENERACIÓN ---
-
-        analyzeBtn.addEventListener('click', async () => {
-            // UI Update
-            document.getElementById('initial-state').classList.add('hidden');
-            document.getElementById('prediction-state').classList.add('hidden');
-            document.getElementById('loading-state').classList.remove('hidden');
-            document.getElementById('scan-line').style.display = 'block';
-            analyzeBtn.disabled = true;
-
-            // SIMULACIÓN DE PREDICCIÓN (Reemplazar con model.predict en producción)
-            await new Promise(resolve => setTimeout(resolve, 2000)); // Fake processing time
-
-            // Generar datos aleatorios para la demo (simulando output del modelo)
-            const simulatedProbabilities = CHEXPERT_LABELS.map(() => Math.random());
-            // Normalizar un poco para que no todo sea aleatorio puro
-            const maxVal = Math.max(...simulatedProbabilities);
-            // Asegurar que "No Finding" tenga sentido en la demo
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
             
-            // Renderizar resultados de barras
-            const resultsContainer = document.getElementById('chexpert-results');
-            resultsContainer.innerHTML = '';
+            // 1. Start UI Loading State
+            processingOverlay.classList.remove('hidden');
+            processingOverlay.style.display = 'flex';
+            scanLine.style.display = 'block';
             
-            const findingsForLLM = [];
+            // Simulate backend stages
+            const stages = [
+                "Subiendo archivo encriptado...",
+                "Normalizando imagen (DICOM/PNG)...",
+                "Ejecutando Inferencia Neural...",
+                "Generando mapas de calor (Grad-CAM)...",
+                "Construyendo reporte final..."
+            ];
 
-            CHEXPERT_LABELS.forEach((label, i) => {
-                const prob = simulatedProbabilities[i];
-                const percentage = (prob * 100).toFixed(1);
-                
-                if (prob > 0.5) findingsForLLM.push(`${label} (${percentage}%)`);
-
-                // Color logic
-                let color = 'bg-gray-300';
-                let textColor = 'text-gray-500';
-                if (prob > 0.7) { color = 'bg-red-500'; textColor = 'text-red-600 font-bold'; }
-                else if (prob > 0.4) { color = 'bg-yellow-400'; textColor = 'text-yellow-600'; }
-                else if (label === "No Finding" && prob > 0.5) { color = 'bg-green-500'; textColor = 'text-green-600 font-bold'; }
-
-                const html = `
-                    <div class="mb-2">
-                        <div class="flex justify-between text-xs mb-1">
-                            <span class="font-medium text-gray-700">${label}</span>
-                            <span class="${textColor}">${percentage}%</span>
-                        </div>
-                        <div class="result-bar-container">
-                            <div class="result-bar ${color}" style="width: ${percentage}%"></div>
-                        </div>
-                    </div>
-                `;
-                resultsContainer.innerHTML += html;
-            });
-
-            // Generar Reporte con Gemini (Simulado si no hay API Key)
-            const reportDiv = document.getElementById('report-text');
-            
-            if (GEMINI_API_KEY === "") {
-                reportDiv.innerHTML = `<strong>Nota:</strong> API Key de Gemini no configurada. Mostrando reporte simulado.\n\n**Hallazgos:**\nLa imagen muestra estructuras torácicas con opacidades sugestivas en base a los marcadores detectados: ${findingsForLLM.join(', ')}.\n\n**Impresión:**\nCorrelación necesaria con cuadro clínico.\n\n**Recomendación:**\nValidación por radiólogo.`;
-            } else {
-                // Aquí iría la llamada real a fetch(GEMINI_URL...)
-                reportDiv.innerText = "Generando reporte detallado con IA...";
+            for (let i = 0; i < stages.length; i++) {
+                statusText.textContent = stages[i];
+                await new Promise(r => setTimeout(r, 800)); // Fake delay
             }
 
-            // Finalizar estado de carga
-            document.getElementById('loading-state').classList.add('hidden');
-            document.getElementById('scan-line').style.display = 'none';
-            document.getElementById('prediction-state').classList.remove('hidden');
-            analyzeBtn.disabled = false;
+            // NOTE TO SEBASTIAN: 
+            // Here you would replace the simulation with the real fetch to FastAPI
+            /*
+            const formData = new FormData(form);
+            try {
+                const response = await fetch('/api/analyze', { method: 'POST', body: formData });
+                const data = await response.json();
+                // Then poll for results using data.session_id
+            } catch (error) { ... }
+            */
+
+            // 2. Show Results (Simulated Data)
+            processingOverlay.classList.add('hidden');
+            processingOverlay.style.display = 'none';
+            scanLine.style.display = 'none';
+            
+            showMockResults();
         });
 
-        // Iniciar
-        init();
+        function showMockResults() {
+            resultsPanel.classList.remove('hidden');
+            document.getElementById('report-date').textContent = new Date().toLocaleDateString();
+            document.getElementById('confidence-score').textContent = "94.2";
+
+            const findingsList = document.getElementById('findings-list');
+            findingsList.innerHTML = `
+                <div class="flex justify-between items-center p-2 bg-red-50 rounded border border-red-100">
+                    <span class="text-sm font-semibold text-red-700">Neumonía (Lóbulo Inf. Derecho)</span>
+                    <span class="text-xs font-bold bg-red-200 text-red-800 px-2 py-1 rounded">Alta Probabilidad</span>
+                </div>
+                <div class="flex justify-between items-center p-2 bg-slate-50 rounded border border-slate-100">
+                    <span class="text-sm text-slate-600">Cardiomegalia</span>
+                    <span class="text-xs font-bold bg-green-100 text-green-800 px-2 py-1 rounded">Negativo</span>
+                </div>
+                <div class="flex justify-between items-center p-2 bg-slate-50 rounded border border-slate-100">
+                    <span class="text-sm text-slate-600">Derrame Pleural</span>
+                    <span class="text-xs font-bold bg-green-100 text-green-800 px-2 py-1 rounded">Negativo</span>
+                </div>
+            `;
+
+            document.getElementById('ai-summary').textContent = "Se observan opacidades alveolares en la base pulmonar derecha, consistentes con un proceso consolidativo infeccioso (neumonía). La silueta cardíaca se encuentra dentro de límites normales. No hay evidencia de derrame pleural significativo.";
+            
+            document.getElementById('recommendations-list').innerHTML = `
+                <li>Correlación clínica con marcadores inflamatorios.</li>
+                <li>Considerar terapia antibiótica según criterio médico.</li>
+                <li>Control radiológico en 4-6 semanas.</li>
+            `;
+
+            // Scroll to results
+            resultsPanel.scrollIntoView({ behavior: 'smooth' });
+        }
 
     </script>
 </body>
