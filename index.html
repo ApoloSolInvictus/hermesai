@@ -3,332 +3,366 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hermes AI - Asistente Radiológico Inteligente</title>
-    <!-- TensorFlow.js Core Library -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-    <!-- MobileNet Model Library -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@latest/dist/mobilenet.min.js"></script>
+    <title>HealthVision AI - Diagnóstico Global</title>
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <!-- Teachable Machine Image (Optional helper) -->
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        .glass-effect {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        .chat-bubble-user {
-            background-color: #0284c7; /* Azul cielo */
-        }
-        .chat-bubble-gemini {
-            background-color: #34d399; /* Verde esmeralda */
-        }
-        #hero-slideshow {
-            position: fixed;
-            top: 0;
-            left: 0;
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .loader { border-top-color: #3B82F6; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .scan-line {
+            position: absolute;
             width: 100%;
-            height: 100%;
-            z-index: -10;
+            height: 4px;
+            background: #3B82F6;
+            box-shadow: 0 0 10px #3B82F6;
+            animation: scan 2s infinite;
+            display: none;
+        }
+        @keyframes scan { 0% { top: 0%; } 50% { top: 100%; } 100% { top: 0%; } }
+        
+        /* Estilos para las barras de resultados de CheXpert */
+        .result-bar-container {
+            height: 6px;
+            border-radius: 3px;
+            background-color: #e5e7eb;
+            margin-top: 4px;
             overflow: hidden;
         }
-        #hero-slideshow img {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
+        .result-bar {
             height: 100%;
-            object-fit: cover;
-            opacity: 0;
-            animation: crossfade 49s infinite; /* 7 images * 7s each */
-        }
-        #hero-slideshow img:nth-child(2) { animation-delay: 7s; }
-        #hero-slideshow img:nth-child(3) { animation-delay: 14s; }
-        #hero-slideshow img:nth-child(4) { animation-delay: 21s; }
-        #hero-slideshow img:nth-child(5) { animation-delay: 28s; }
-        #hero-slideshow img:nth-child(6) { animation-delay: 35s; }
-        #hero-slideshow img:nth-child(7) { animation-delay: 42s; }
-
-        @keyframes crossfade {
-            0%, 20%, 100% { opacity: 0; }
-            5%, 15% { opacity: 1; }
-        }
-
-        #hero-slideshow::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(10, 25, 47, 0.7); /* Dark overlay */
+            border-radius: 3px;
+            transition: width 0.5s ease-in-out;
         }
     </style>
 </head>
-<body class="bg-slate-900 text-white">
+<body class="text-gray-800">
 
-    <div id="hero-slideshow">
-        <img src="images/cover.webp" alt="Fondo de imagen médica 1: Resonancia magnética cerebral">
-        <img src="images/cuerpo.jpeg" alt="Fondo de imagen médica 2: Red neuronal abstracta">
-        <img src="images/doctor.jpg" alt="Fondo de imagen médica 3: Profesional de la salud analizando imágenes">
-        <img src="images/intro.webp" alt="Fondo de imagen médica 4: Visualización de datos moleculares">
-        <img src="images/pulmon.jpg" alt="Fondo de imagen médica 5: Escáner de tomografía computarizada">
-        <img src="images/fin.jpg" alt="Fondo de imagen médica 6: Fondo tecnológico abstracto">
-        <img src="images/HERMES.png" alt="Fondo de imagen médica 7: Radiografía de tórax">
-    </div>
-
-    <div class="min-h-screen p-4 sm:p-6 lg:p-8 relative z-10">
-        <!-- Encabezado -->
-        <header class="flex justify-between items-center mb-8">
-            <div class="flex items-center space-x-3">
-                <img src="images/HERMES.png" alt="Logo de Hermes AI" class="h-12 w-auto">
+    <!-- Navbar -->
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="activity" class="text-blue-600 w-8 h-8"></i>
+                    <span class="text-2xl font-bold text-blue-600 tracking-wider">HealthVision AI</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <select id="language-selector" class="bg-gray-100 border border-gray-300 text-gray-700 py-1 px-3 rounded focus:outline-none focus:bg-white focus:border-gray-500">
+                        <option value="es">Español</option>
+                        <option value="en">English</option>
+                        <option value="fr">Français</option>
+                        <option value="pt">Português</option>
+                    </select>
+                </div>
             </div>
-            <a href="#" id="donate-button" class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-5 rounded-lg shadow-lg transition duration-300 flex items-center space-x-2">
-                <i data-lucide="heart"></i>
-                <span>Donar con PayPal</span>
-            </a>
-        </header>
+        </div>
+    </nav>
 
-        <main>
-            <!-- Sección de Introducción -->
-            <section class="text-center mb-12">
-                <h2 class="text-4xl md:text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-emerald-400">Revolucionando el Diagnóstico por Imagen</h2>
-                <p class="max-w-3xl mx-auto text-slate-300 text-lg">
-                    Hermes AI utiliza IA de vanguardia para asistir a radiólogos, acelerando la generación de reportes preliminares con alta precisión. Sube una imagen, obtén un análisis en segundos y mantén la total privacidad de los datos.
-                </p>
-            </section>
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 py-10">
+        
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold mb-2" data-i18n="title">Análisis Médico Asistido por IA</h1>
+            <p class="text-gray-500 max-w-2xl mx-auto" data-i18n="subtitle">Sistema de apoyo diagnóstico global y gratuito. Detecta 14 patologías pulmonares usando IA en el borde.</p>
+            
+            <div id="model-status" class="mt-4 inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-800" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                Cargando modelos neuronales...
+            </div>
+        </div>
 
-            <!-- Contenedor Principal de la Aplicación -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="grid lg:grid-cols-2 gap-8">
+            
+            <!-- Input Section -->
+            <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200 h-fit">
+                <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2 flex items-center" data-i18n="upload_title">
+                    <i data-lucide="upload" class="w-5 h-5 mr-2"></i> Cargar Estudio Médico
+                </h2>
                 
-                <!-- Columna 1: Análisis de Imágenes -->
-                <div class="glass-effect rounded-2xl p-6 shadow-2xl">
-                    <h3 class="text-2xl font-semibold mb-4 flex items-center space-x-2">
-                        <i data-lucide="scan-line"></i>
-                        <span>Generador de Reporte AI</span>
-                    </h3>
-                    
-                    <!-- Zona para subir archivos -->
-                    <div id="drop-zone" class="border-2 border-dashed border-slate-400 rounded-lg p-8 text-center cursor-pointer hover:border-emerald-400 hover:bg-slate-800/20 transition duration-300">
-                        <input type="file" id="file-input" class="hidden" accept="image/*">
-                        <div class="flex flex-col items-center text-slate-300">
-                             <i data-lucide="upload-cloud" class="w-16 h-16 mb-4"></i>
-                            <p class="font-semibold">Arrastra y suelta las imágenes aquí</p>
-                            <p class="text-sm text-slate-400">o haz clic para seleccionar</p>
-                            <p id="file-name" class="mt-2 text-emerald-400"></p>
-                        </div>
+                <!-- Image Upload Area -->
+                <div class="relative w-full h-80 border-2 border-dashed border-blue-300 rounded-lg flex flex-col justify-center items-center bg-blue-50 hover:bg-blue-100 transition cursor-pointer overflow-hidden" id="drop-area">
+                    <input type="file" id="image-upload" class="absolute w-full h-full opacity-0 cursor-pointer" accept="image/*">
+                    <div id="upload-placeholder" class="text-center p-6">
+                        <i data-lucide="image-plus" class="w-16 h-16 text-blue-400 mx-auto mb-4"></i>
+                        <span class="text-blue-500 font-medium block" data-i18n="select_image">Seleccionar imagen o arrastrar aquí</span>
+                        <span class="text-gray-400 text-xs block mt-2">(Formatos: JPG, PNG - RX Tórax)</span>
                     </div>
-                    
-                    <!-- Vista previa de imagen -->
-                    <div id="image-preview-container" class="mt-4 hidden">
-                        <p class="font-semibold mb-2">Vista Previa:</p>
-                        <img id="image-preview" src="#" alt="Vista previa de imagen" class="max-w-full mx-auto rounded-lg max-h-60 object-contain"/>
-                    </div>
-
-                    <button id="generate-report" class="mt-6 w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition duration-300 disabled:bg-slate-600 disabled:cursor-not-allowed" disabled>
-                        Generar Reporte
-                    </button>
-                    
-                    <!-- Área del Reporte -->
-                    <div class="mt-6">
-                        <h4 class="font-semibold text-lg mb-2">Reporte Preliminar:</h4>
-                        <div id="report-output" class="w-full h-48 bg-slate-800/50 rounded-lg p-4 text-slate-300 overflow-y-auto">
-                            <span class="italic">El reporte generado por la IA aparecerá aquí...</span>
-                        </div>
-                    </div>
-
-                    <button id="download-report" class="mt-4 w-full bg-slate-600 hover:bg-slate-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 disabled:bg-slate-800 disabled:cursor-not-allowed" disabled>
-                        Descargar Reporte
-                    </button>
+                    <img id="preview-image" class="absolute w-full h-full object-contain hidden" />
+                    <div class="scan-line" id="scan-line"></div>
                 </div>
 
-                <!-- Columna 2: Chat con Gemini -->
-                <div class="glass-effect rounded-2xl p-6 shadow-2xl flex flex-col">
-                    <h3 class="text-2xl font-semibold mb-4 flex items-center space-x-2">
-                        <i data-lucide="bot"></i>
-                        <span>Asistente Gemini</span>
-                    </h3>
-                    <div id="chat-window" class="flex-grow bg-slate-800/50 rounded-lg p-4 overflow-y-auto mb-4 h-96">
-                        <!-- Mensajes de chat -->
-                        <div class="flex justify-start mb-4">
-                            <div class="chat-bubble-gemini text-white py-2 px-4 rounded-lg max-w-xs">
-                                ¡Hola! Soy Gemini. ¿En qué puedo ayudarte hoy con tus consultas radiológicas o técnicas?
+                <!-- Controls -->
+                <div class="mt-6 space-y-4">
+                    <button id="analyze-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition transform active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center shadow-md" disabled>
+                        <i data-lucide="zap" class="w-5 h-5 mr-2"></i>
+                        <span data-i18n="analyze_btn">Analizar con IA</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200 flex flex-col h-full min-h-[600px]">
+                <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2 flex items-center" data-i18n="results_title">
+                    <i data-lucide="file-text" class="w-5 h-5 mr-2"></i> Resultados del Análisis
+                </h2>
+                
+                <div id="results-content" class="flex-1 flex flex-col">
+                    
+                    <!-- Initial State -->
+                    <div id="initial-state" class="flex-1 flex flex-col justify-center items-center text-center opacity-60">
+                        <i data-lucide="microscope" class="w-20 h-20 text-gray-300 mb-4"></i>
+                        <p class="text-gray-500" data-i18n="waiting_results">Esperando imagen para análisis...</p>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div id="loading-state" class="hidden flex-1 flex flex-col justify-center items-center text-center">
+                        <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div>
+                        <p class="text-blue-600 font-semibold animate-pulse" data-i18n="processing">Procesando redes neuronales...</p>
+                        <p class="text-xs text-gray-400 mt-2">Analizando 14 marcadores patológicos</p>
+                    </div>
+
+                    <!-- Prediction State -->
+                    <div id="prediction-state" class="hidden w-full text-left space-y-6">
+                        
+                        <!-- Reporte Narrativo (Gemini) -->
+                        <div class="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                            <h3 class="font-bold text-gray-800 mb-2 flex items-center text-sm uppercase tracking-wide">
+                                <i data-lucide="bot" class="w-4 h-4 mr-2 text-purple-600"></i> Reporte Clínico (IA Generativa)
+                            </h3>
+                            <div id="report-text" class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed font-mono">
+                                <!-- Texto generado se inyecta aquí -->
                             </div>
                         </div>
-                    </div>
-                    <div class="flex space-x-2">
-                        <input type="text" id="chat-input" placeholder="Escribe tu pregunta aquí..." class="flex-grow bg-slate-800 border border-slate-600 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                        <button id="send-chat" class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold p-3 rounded-lg flex items-center justify-center">
-                            <i data-lucide="send-horizontal"></i>
+
+                        <!-- Detalle Estructural (CheXpert) -->
+                        <div>
+                            <h3 class="font-bold text-gray-800 mb-3 flex items-center text-sm uppercase tracking-wide">
+                                <i data-lucide="bar-chart-2" class="w-4 h-4 mr-2 text-blue-600"></i> Análisis Probabilístico (14 Clases)
+                            </h3>
+                            <div id="chexpert-results" class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 max-h-60 overflow-y-auto pr-2">
+                                <!-- Barras se inyectan aquí -->
+                            </div>
+                        </div>
+
+                        <!-- Disclaimer -->
+                        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <i data-lucide="alert-triangle" class="h-5 w-5 text-yellow-400"></i>
+                                </div>
+                                <div class="ml-3">
+                                    <p class="text-xs text-yellow-700">
+                                        <strong data-i18n="disclaimer">AVISO LEGAL:</strong> 
+                                        <span data-i18n="disclaimer_text">Esta herramienta es un asistente de IA para fines educativos y de apoyo. NO sustituye el diagnóstico de un profesional médico certificado.</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button id="download-btn" class="w-full bg-gray-800 text-white font-bold py-2 px-4 rounded hover:bg-black transition flex justify-center items-center text-sm">
+                            <i data-lucide="download" class="w-4 h-4 mr-2"></i> Descargar PDF
                         </button>
                     </div>
                 </div>
-
             </div>
-        </main>
+        </div>
     </div>
 
     <script>
         lucide.createIcons();
 
-        // Lógica para la zona de arrastrar y soltar
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('file-input');
-        const fileNameDisplay = document.getElementById('file-name');
-        const imagePreviewContainer = document.getElementById('image-preview-container');
-        const imagePreview = document.getElementById('image-preview');
-        const generateButton = document.getElementById('generate-report');
-        const reportOutput = document.getElementById('report-output');
-        const downloadButton = document.getElementById('download-report');
+        // --- 1. CONFIGURACIÓN Y CONSTANTES ---
+        // Clases del modelo CheXpert (Estándar médico)
+        const CHEXPERT_LABELS = [
+            "No Finding (Sin Hallazgo)", 
+            "Enlarged Cardiomediastinum", 
+            "Cardiomegaly", 
+            "Lung Opacity", 
+            "Lung Lesion", 
+            "Edema", 
+            "Consolidation", 
+            "Pneumonia", 
+            "Atelectasis", 
+            "Pneumothorax", 
+            "Pleural Effusion", 
+            "Pleural Other", 
+            "Fracture", 
+            "Support Devices"
+        ];
 
-        dropZone.addEventListener('click', () => fileInput.click());
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('border-emerald-400');
-        });
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('border-emerald-400');
-        });
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('border-emerald-400');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                fileInput.files = files;
-                handleFile(files[0]);
+        // Gemini API Configuration
+        // NOTA PARA SEBASTIAN: La API Key debe inyectarse aquí o manejarse de forma segura.
+        const GEMINI_API_KEY = ""; 
+        const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
+
+        let model;
+        const URL_MODELO = "./my_model/"; // Ruta donde Sebastian pondrá su modelo exportado
+
+        // --- 2. GESTIÓN DE IDIOMAS ---
+        const translations = {
+            es: {
+                title: "Análisis Médico Asistido por IA",
+                subtitle: "Sistema de apoyo diagnóstico global y gratuito. Detecta 14 patologías pulmonares.",
+                upload_title: "Cargar Estudio Médico",
+                select_image: "Seleccionar imagen o arrastrar aquí",
+                analyze_btn: "Analizar con IA",
+                results_title: "Resultados del Análisis",
+                waiting_results: "Esperando imagen...",
+                processing: "Procesando...",
+                disclaimer: "AVISO:",
+                disclaimer_text: "Herramienta de asistencia. NO sustituye diagnóstico médico."
+            },
+            en: {
+                title: "AI Assisted Medical Analysis",
+                subtitle: "Global free diagnostic support. Detects 14 pulmonary pathologies.",
+                upload_title: "Upload Medical Study",
+                select_image: "Select image or drag here",
+                analyze_btn: "Analyze with AI",
+                results_title: "Analysis Results",
+                waiting_results: "Waiting for image...",
+                processing: "Processing...",
+                disclaimer: "DISCLAIMER:",
+                disclaimer_text: "Assistance tool only. DOES NOT replace medical diagnosis."
             }
-        });
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                handleFile(e.target.files[0]);
-            }
-        });
-
-        function handleFile(file) {
-            fileNameDisplay.textContent = file.name;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                imagePreview.src = e.target.result;
-                imagePreviewContainer.classList.remove('hidden');
-            }
-            reader.readAsDataURL(file);
-            generateButton.disabled = false;
-        }
-
-        // --- INICIO DE LA CORRECCIÓN ---
-        // Se reemplaza la simulación con la lógica real de TensorFlow.js
-        generateButton.addEventListener('click', async () => {
-            reportOutput.innerHTML = '<p class="text-emerald-400 animate-pulse">Cargando modelo de IA... Por favor, espera.</p>';
-            
-            try {
-                // 1. Cargar el modelo pre-entrenado MobileNet.
-                // Esta función 'mobilenet.load()' viene de la librería que incluimos.
-                const model = await mobilenet.load();
-                reportOutput.innerHTML = '<p class="text-emerald-400 animate-pulse">Modelo cargado. Analizando imagen...</p>';
-
-                // 2. Obtener el elemento de la imagen que el usuario subió.
-                const imageElement = document.getElementById('image-preview');
-                
-                // 3. Clasificar la imagen usando el modelo de IA.
-                const predictions = await model.classify(imageElement);
-
-                // 4. Formatear y mostrar los resultados reales en el área de reporte.
-                if (predictions && predictions.length > 0) {
-                    const topPrediction = predictions[0];
-                    
-                    reportOutput.innerHTML = `
-                        <div class="space-y-3 text-sm">
-                            <div>
-                                <p class="font-semibold text-sky-400">ID de Estudio:</p>
-                                <p class="font-mono text-xs">${new Date().getTime()}</p>
-                            </div>
-                            <div>
-                                <p class="font-semibold text-sky-400">Hallazgos Principales (detectados por IA):</p>
-                                <p>- Se identifica una estructura con características consistentes con <strong class="text-emerald-300">${topPrediction.className.split(', ')[0]}</strong>.</p>
-                                <p>- Confianza de la IA en este hallazgo: <strong class="text-emerald-300">${(topPrediction.probability * 100).toFixed(2)}%</strong>.</p>
-                            </div>
-                            <div>
-                                <p class="font-semibold text-sky-400">Impresión Diagnóstica Preliminar:</p>
-                                <p>Los hallazgos sugieren una posible correlación con la estructura identificada. Se requiere una evaluación detallada por parte del especialista.</p>
-                            </div>
-                             <div>
-                                <p class="font-semibold text-sky-400">Recomendaciones:</p>
-                                <p>Correlacionar con el historial clínico del paciente y considerar estudios complementarios si es clínicamente indicado.</p>
-                            </div>
-                            <div class="pt-2 border-t border-slate-700">
-                                <p class="text-xs italic text-slate-400"><strong>**DISCLAIMER:**</strong> Este es un reporte preliminar generado por IA (Modelo General MobileNet v2) y NO constituye un diagnóstico. Debe ser revisado, validado y firmado por un radiólogo certificado.</p>
-                            </div>
-                        </div>
-                    `;
-                    downloadButton.disabled = false;
-                } else {
-                     reportOutput.innerHTML = '<p class="text-amber-400">La IA no pudo identificar estructuras claras en la imagen. Intenta con otra imagen o ajusta el contraste.</p>';
-                }
-
-            } catch (error) {
-                console.error("Error durante el análisis de IA:", error);
-                reportOutput.innerHTML = '<p class="text-red-500">Ocurrió un error al procesar la imagen. Por favor, revisa la consola del navegador para más detalles técnicos.</p>';
-            }
-        });
-        // --- FIN DE LA CORRECCIÓN ---
-        
-        // Lógica del Chat
-        const chatWindow = document.getElementById('chat-window');
-        const chatInput = document.getElementById('chat-input');
-        const sendButton = document.getElementById('send-chat');
-
-        const addChatMessage = (message, sender) => {
-            const messageDiv = document.createElement('div');
-            const bubbleDiv = document.createElement('div');
-            
-            messageDiv.classList.add('flex', 'mb-4');
-            bubbleDiv.classList.add('text-white', 'py-2', 'px-4', 'rounded-lg', 'max-w-xs');
-
-            if (sender === 'user') {
-                messageDiv.classList.add('justify-end');
-                bubbleDiv.classList.add('chat-bubble-user');
-            } else {
-                messageDiv.classList.add('justify-start');
-                bubbleDiv.classList.add('chat-bubble-gemini');
-            }
-
-            bubbleDiv.textContent = message;
-            messageDiv.appendChild(bubbleDiv);
-            chatWindow.appendChild(messageDiv);
-            chatWindow.scrollTop = chatWindow.scrollHeight;
-        }
-
-        const handleChatSend = () => {
-            const userMessage = chatInput.value.trim();
-            if (userMessage) {
-                addChatMessage(userMessage, 'user');
-                chatInput.value = '';
-                
-                // Simulación de respuesta de Gemini
-                setTimeout(() => {
-                    addChatMessage("Estoy procesando tu pregunta. Dame un momento...", 'gemini');
-                }, 1500);
-            }
+            // Agregar FR y PT aquí...
         };
+
+        document.getElementById('language-selector').addEventListener('change', (e) => {
+            const lang = e.target.value;
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[lang] && translations[lang][key]) el.textContent = translations[lang][key];
+            });
+        });
+
+        // --- 3. LÓGICA DE IA (MODELO + INFERENCIA) ---
+
+        async function init() {
+            const statusEl = document.getElementById('model-status');
+            try {
+                // Intenta cargar el modelo de Sebastian
+                // model = await tmImage.load(URL_MODELO + "model.json", URL_MODELO + "metadata.json");
+                
+                // SIMULACIÓN PARA DEMOSTRACIÓN (Eliminar al integrar modelo real)
+                // Simulamos que el modelo cargó
+                setTimeout(() => {
+                    statusEl.className = "mt-4 inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800";
+                    statusEl.innerHTML = `<i data-lucide="check" class="w-4 h-4 mr-2"></i> Sistema Neural Activo (Modo Simulación)`;
+                    lucide.createIcons();
+                    
+                    if (document.getElementById('image-upload').files.length > 0) {
+                        document.getElementById('analyze-btn').disabled = false;
+                    }
+                }, 1500);
+
+            } catch (e) {
+                console.error("Error cargando modelo:", e);
+                statusEl.className = "mt-4 inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-red-100 text-red-800";
+                statusEl.innerText = "Error de carga de IA";
+            }
+        }
+
+        // --- 4. MANEJO DE IMAGEN Y UI ---
         
-        sendButton.addEventListener('click', handleChatSend);
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                handleChatSend();
+        const imageUpload = document.getElementById('image-upload');
+        const previewImage = document.getElementById('preview-image');
+        const analyzeBtn = document.getElementById('analyze-btn');
+
+        imageUpload.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    previewImage.src = e.target.result;
+                    previewImage.classList.remove('hidden');
+                    document.getElementById('upload-placeholder').classList.add('hidden');
+                    analyzeBtn.disabled = false;
+                }
+                reader.readAsDataURL(e.target.files[0]);
             }
         });
+
+        // --- 5. ANÁLISIS Y GENERACIÓN ---
+
+        analyzeBtn.addEventListener('click', async () => {
+            // UI Update
+            document.getElementById('initial-state').classList.add('hidden');
+            document.getElementById('prediction-state').classList.add('hidden');
+            document.getElementById('loading-state').classList.remove('hidden');
+            document.getElementById('scan-line').style.display = 'block';
+            analyzeBtn.disabled = true;
+
+            // SIMULACIÓN DE PREDICCIÓN (Reemplazar con model.predict en producción)
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Fake processing time
+
+            // Generar datos aleatorios para la demo (simulando output del modelo)
+            const simulatedProbabilities = CHEXPERT_LABELS.map(() => Math.random());
+            // Normalizar un poco para que no todo sea aleatorio puro
+            const maxVal = Math.max(...simulatedProbabilities);
+            // Asegurar que "No Finding" tenga sentido en la demo
+            
+            // Renderizar resultados de barras
+            const resultsContainer = document.getElementById('chexpert-results');
+            resultsContainer.innerHTML = '';
+            
+            const findingsForLLM = [];
+
+            CHEXPERT_LABELS.forEach((label, i) => {
+                const prob = simulatedProbabilities[i];
+                const percentage = (prob * 100).toFixed(1);
+                
+                if (prob > 0.5) findingsForLLM.push(`${label} (${percentage}%)`);
+
+                // Color logic
+                let color = 'bg-gray-300';
+                let textColor = 'text-gray-500';
+                if (prob > 0.7) { color = 'bg-red-500'; textColor = 'text-red-600 font-bold'; }
+                else if (prob > 0.4) { color = 'bg-yellow-400'; textColor = 'text-yellow-600'; }
+                else if (label === "No Finding" && prob > 0.5) { color = 'bg-green-500'; textColor = 'text-green-600 font-bold'; }
+
+                const html = `
+                    <div class="mb-2">
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="font-medium text-gray-700">${label}</span>
+                            <span class="${textColor}">${percentage}%</span>
+                        </div>
+                        <div class="result-bar-container">
+                            <div class="result-bar ${color}" style="width: ${percentage}%"></div>
+                        </div>
+                    </div>
+                `;
+                resultsContainer.innerHTML += html;
+            });
+
+            // Generar Reporte con Gemini (Simulado si no hay API Key)
+            const reportDiv = document.getElementById('report-text');
+            
+            if (GEMINI_API_KEY === "") {
+                reportDiv.innerHTML = `<strong>Nota:</strong> API Key de Gemini no configurada. Mostrando reporte simulado.\n\n**Hallazgos:**\nLa imagen muestra estructuras torácicas con opacidades sugestivas en base a los marcadores detectados: ${findingsForLLM.join(', ')}.\n\n**Impresión:**\nCorrelación necesaria con cuadro clínico.\n\n**Recomendación:**\nValidación por radiólogo.`;
+            } else {
+                // Aquí iría la llamada real a fetch(GEMINI_URL...)
+                reportDiv.innerText = "Generando reporte detallado con IA...";
+            }
+
+            // Finalizar estado de carga
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('scan-line').style.display = 'none';
+            document.getElementById('prediction-state').classList.remove('hidden');
+            analyzeBtn.disabled = false;
+        });
+
+        // Iniciar
+        init();
 
     </script>
 </body>
 </html>
-
-
-
-
-
-
